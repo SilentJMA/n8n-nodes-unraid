@@ -113,7 +113,7 @@ help - All commands
 
 1. Create a bot with @BotFather and add a **Telegram** credential in n8n with its token.
    n8n must be reachable at a **public HTTPS** address (for example a Cloudflare Tunnel or a reverse proxy), and the n8n container needs `N8N_WEBHOOK_URL=https://<that host>/`, otherwise Telegram rejects the trigger with *Bad request*. See [SUPPORT.md](SUPPORT.md).
-2. Import the three workflows. In each one, select the **Unraid API** credential (`https://192.168.178.2`, Ignore SSL Issues on) and the Telegram credential.
+2. Import the three workflows. In each one, select the **Unraid API** credential (your server as `https://<unraid-ip>`, Ignore SSL Issues on) and the Telegram credential.
 3. Publish the **Sysadmin & Telegram bot** workflow and send the bot any message. While `cfg.allowedChatIds` is empty, the bot only replies with your chat ID and runs nothing else.
 4. Put that ID in **Bot settings › cfg.allowedChatIds**, **Alert settings › cfg.telegramChatId** and **Settings › cfg.telegramChatId** (Docker workflow). After that, the bot ignores every other chat.
 5. In the bot's **Run Docker workflow** node, pick *Unraid · Docker updates & actions*. Alternatively, regenerate with `DOCKER_WORKFLOW_ID=<id> npm run workflow` and re-import.

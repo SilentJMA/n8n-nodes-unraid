@@ -4,6 +4,8 @@ All notable changes to this package. Versions follow [semver](https://semver.org
 
 ## Unreleased
 
+- Docs: Telegram needs a public HTTPS webhook. Set `N8N_WEBHOOK_URL`; on n8n 2.x, `WEBHOOK_URL` alone leaves test webhooks on the editor URL.
+
 ### Project
 - Community files: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, issue and pull request templates, Dependabot.
 - CI on every push and pull request. A release workflow publishes to npm with provenance when a `v*` tag is pushed.

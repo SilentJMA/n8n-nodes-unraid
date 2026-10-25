@@ -15,6 +15,7 @@ Support is community-based and best effort. **Never share API keys or bot tokens
 | `Unraid API request failed` with an `http://` URL | Unraid redirects http to https when SSL is enabled, and the request body is lost. Use `https://…` and turn on **Ignore SSL Issues**. |
 | `Forbidden` / *lacks the permission* | Updates, restarts, and array or VM control need the **admin** role on the API key. |
 | The trigger never fires | The first poll only records a baseline. Use *Fetch Test Event*, or turn on **Emit Existing on First Poll**. |
+| Telegram Trigger fails to activate with *Bad request - please check your parameters* (the n8n log says `An HTTPS URL must be provided for webhook`) | Telegram only accepts public **HTTPS** webhook URLs, and n8n builds them from its own settings. On the n8n container, set **`N8N_WEBHOOK_URL=https://<your public n8n host>/`** and restart. Setting only `WEBHOOK_URL` is not enough: n8n 2.x builds *test* webhook URLs from `N8N_EDITOR_BASE_URL`, so they stay `http://…`. Then publish the bot workflow, and don't use the trigger's test button while it is published. |
 | Telegram bot does not answer | Only the bot workflow may have a Telegram Trigger, and it must be published. Check `cfg.allowedChatIds` holds your chat ID. |
 | The weekly Docker update stops halfway | Keep `n8n` in `cfg.excludeFromUpdates`. Updating n8n kills its own execution. |
 

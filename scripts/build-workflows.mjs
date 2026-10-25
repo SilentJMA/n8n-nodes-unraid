@@ -486,7 +486,7 @@ Only chats listed in **cfg.allowedChatIds** are served. Until it is set, the bot
 	b.sticky('Setup', [-340, -460], 560, 420, `## Setup
 1. Create a bot with **@BotFather**, add a **Telegram** credential with its token, and select it in the trigger and both Telegram nodes.
 2. Select the **Unraid API** credential in the Unraid nodes.
-3. Publish / activate, send the bot any message: it replies with your chat ID. Put it in **Bot settings › cfg.allowedChatIds** (comma-separated for several) and in the other two workflows' settings.
+3. n8n must be reachable at a public **HTTPS** URL with **N8N_WEBHOOK_URL=https://<host>/** set on its container, or Telegram rejects the trigger with *Bad request*. Publish / activate, send the bot any message: it replies with your chat ID. Put it in **Bot settings › cfg.allowedChatIds** (comma-separated for several) and in the other two workflows' settings.
 4. In **Run Docker workflow** pick the *Unraid · Docker updates & actions* workflow (publish that one too).
 5. Optional: send BotFather /setcommands with the list in the README so commands autocomplete.`, 4);
 

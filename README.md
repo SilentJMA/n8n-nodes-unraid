@@ -14,6 +14,8 @@ Both nodes use the same built-in rules ([src/lib/analysis.ts](src/lib/analysis.t
 
 ## Installation
 
+📦 **npm:** [@silentjma/n8n-nodes-unraid](https://www.npmjs.com/package/@silentjma/n8n-nodes-unraid)
+
 **Community Nodes (recommended):** in n8n, open **Settings › Community Nodes › Install** and enter `@silentjma/n8n-nodes-unraid`.
 
 **Manual / custom folder:** run `npm pack` and extract the tarball's `package/` folder into `~/.n8n/custom/n8n-nodes-unraid`. In Docker that is `/home/node/.n8n/custom`, which on Unraid is usually `/mnt/user/appdata/n8n/custom`. Then restart n8n.

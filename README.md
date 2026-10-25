@@ -48,6 +48,9 @@ Prefer workflows without a community node? [n8n-unraid-telegram-workflows](https
 | Notification | Create (optionally only if unique), Get Many, Get Overview, Get Warnings and Alerts, Archive, Archive All |
 | Custom GraphQL | Execute any query or mutation |
 
+
+<img width="638" height="763" alt="{0E837C8A-E0E8-4CB5-903F-C4CD4459B37A}" src="https://github.com/user-attachments/assets/a3143eab-9a77-4ef6-99b7-35f639eb996e" />
+
 Containers can be given by **name** (`plex`) or ID.
 
 ## Unraid Trigger events
@@ -72,6 +75,9 @@ On the first poll, the trigger only records a baseline. Turn on *Emit Existing o
 | [Unraid · Alerts](workflows/unraid-alerts.json) | Syslog every minute, health report every 5 min | Sends each new problem to Telegram with suggested next steps and tappable follow-up commands (`/logs_sonarr`, `/disks`…). Repeats are throttled (60 min per alert key). Optional: AI triage (disabled by default), an Unraid notification as well, and automatic restart of stopped autostart containers. |
 | [Unraid · Docker updates & actions](workflows/unraid-docker.json) | Weekly (Sun 04:00), and called by the bot | Weekly: updates every container that has a new image, except `cfg.excludeFromUpdates`. It reports only when something changed. Also answers the Docker commands. |
 | [Unraid · Sysadmin & Telegram bot](workflows/unraid-sysadmin-bot.json) | Telegram Trigger | The bot. Answers the sysadmin commands and forwards Docker commands to the Docker workflow. |
+
+<img width="1184" height="743" alt="image" src="https://github.com/user-attachments/assets/606adfce-023e-4d05-b873-b86bea7c8f0e" />
+
 
 A Telegram bot delivers updates to a single webhook, so **only the bot workflow has a Telegram Trigger**. The other two just send messages.
 

@@ -1,0 +1,1525 @@
+{
+  "name": "Unraid · Sysadmin & Telegram bot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Unraid · Sysadmin & Telegram bot\nThe **only** workflow with a Telegram Trigger (a bot delivers updates to a single webhook). It answers sysadmin commands itself and forwards Docker commands to the *Docker updates & actions* workflow.\n\n**Sysadmin:** /status · /info · /disks · /parity · /parity_start · /parity_pause · /parity_resume · /parity_cancel · /syslog · /notifications · /archive_all · /vms · /help\n**Docker:** /containers · /updates · /update_all · /update_<name> · /restart_<name> · /start_<name> · /stop_<name> · /logs_<name>\n\nOnly chats listed in **cfg.allowedChatIds** are served. Until it is set, the bot only replies with the sender's chat ID, so you can find yours and nothing else runs.",
+        "width": 640,
+        "height": 420
+      },
+      "id": "4a76cfa6-155e-4383-a1a5-1441babac799",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Setup\n1. Create a bot with **@BotFather**, add a **Telegram** credential with its token, and select it in the trigger and both Telegram nodes.\n2. Select the **Unraid API** credential in the Unraid nodes.\n3. Publish / activate, send the bot any message: it replies with your chat ID. Put it in **Bot settings › cfg.allowedChatIds** (comma-separated for several) and in the other two workflows' settings.\n4. In **Run Docker workflow** pick the *Unraid · Docker updates & actions* workflow (publish that one too).\n5. Optional: send BotFather /setcommands with the list in the README so commands autocomplete.",
+        "width": 560,
+        "height": 420,
+        "color": 4
+      },
+      "id": "1eb6d1fc-408d-4148-a831-ffdb725362d9",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -340,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "00a12bbe-bbd2-4758-a9f8-3c2dcc8eac77",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -920,
+        200
+      ],
+      "webhookId": "4003f1ba-ea49-48ee-a1ac-38f53bb9e0b4"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "282c2d97-5126-42d6-a497-bc2f95941dbb",
+              "name": "cfg.allowedChatIds",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "efefedd2-5847-4ea0-a9e5-959852123fd0",
+      "name": "Bot settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// \"/restart_plex_media_server\" -> { command: 'restart', arg: 'plex_media_server' }; \"_confirm\" suffix confirms.\nconst PREFIXED = ['update', 'restart', 'start', 'stop', 'logs', 'parity', 'archive'];\nreturn $input.all().map(({ json: j }) => {\n  const msg = j.message ?? {};\n  const chatId = String(msg.chat?.id ?? '');\n  const allowed = String(j.cfg?.allowedChatIds ?? '').split(',').map((s) => s.trim()).filter(Boolean);\n  const text = String(msg.text ?? '').trim();\n  let [head = '', ...rest] = text.replace(/^\\//, '').split(/\\s+/);\n  head = head.replace(/@\\w+$/, '').toLowerCase();\n  let confirmed = rest.includes('confirm');\n  rest = rest.filter((r) => r !== 'confirm');\n  if (head.endsWith('_confirm')) { confirmed = true; head = head.slice(0, -'_confirm'.length); }\n  let command = text.startsWith('/') ? head : 'help';\n  let arg = rest.join(' ');\n  const i = head.indexOf('_');\n  if (i > 0 && PREFIXED.includes(head.slice(0, i))) {\n    command = head.slice(0, i);\n    arg = [head.slice(i + 1), arg].filter(Boolean).join(' ');\n  }\n  // Plain /start (Telegram's \"start bot\") shows the menu; /start_<name> starts a container.\n  if (command === 'start' && !arg) command = 'help';\n  const DOCKER = ['containers', 'updates', 'update', 'restart', 'start', 'stop', 'logs'];\n  return { json: {\n    chatId, user: msg.from?.username ?? msg.from?.first_name ?? '', text,\n    command, arg, confirmed,\n    group: DOCKER.includes(command) ? 'docker' : command,\n    authorized: allowed.includes(chatId), configured: allowed.length > 0,\n  } };\n});"
+      },
+      "id": "7c594f69-0957-4126-a06d-79e222d3085e",
+      "name": "Parse command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cf59fa51-d66d-463b-a26d-19648aa92d7d",
+              "leftValue": "={{ $json.authorized }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1543483c-21d1-4b1c-ae5f-df5e67e7c086",
+      "name": "Authorized?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "102f03b7-d4b6-408c-a403-df54f6c41400",
+      "name": "Send reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1500,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unconfigured bot: tell the sender their chat ID. Configured: ignore strangers silently.\nreturn $input.all().filter((i) => !i.json.configured).map(({ json: j }) => ({ json: {\n  chatId: j.chatId,\n  text: `👋 This bot is not configured yet.\\nYour chat ID is <code>${j.chatId}</code>.\\nAdd it to <b>Bot settings › cfg.allowedChatIds</b> in the Sysadmin &amp; Telegram bot workflow (and to the chat ID setting of the other two workflows).`,\n} }));"
+      },
+      "id": "d12a59d0-0486-4648-aa40-261cbca67b08",
+      "name": "Not authorized",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9bc0fda6-a2ba-42ad-af0d-2f1a150ad303",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "edfc3688-53f9-4d45-a3ec-a712c84513dd",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "82be5010-d9c3-4eb1-adf0-54a3c6258f39",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "info"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2c4f2d18-95dd-4953-aca6-7791a4ec9375",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "disks",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "disks"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e3351aa3-773b-41cf-a03f-9ee127aec591",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "parity",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "parity"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7dc16b87-bee1-4bea-ace3-28e6bb7b9907",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "syslog",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "syslog"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0389af46-87ae-49bc-ada0-15de102682c8",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "notifications",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "notifications"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4504a401-011d-4c43-a899-f2f5358c1765",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "archive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "archive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c1b0c1f1-704c-4c10-ad78-baa2b94c6608",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "vms",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "vms"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "460053f4-d317-4d2f-ab4b-02e0d0bde5d2",
+                    "leftValue": "={{ $json.group }}",
+                    "rightValue": "docker",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "docker"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "other"
+        }
+      },
+      "id": "6717a502-035c-4265-a00e-18c73c4666de",
+      "name": "Command",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        40,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst unknown = j.command !== 'help' && j.group !== 'help';\nconst text = [\n  unknown ? `❓ Unknown command <code>${String(j.text).replace(/[<>&]/g, '')}</code>\\n` : '🖥️ <b>Unraid bot</b>',\n  '<b>Server</b>\\n/status — health report with next steps\\n/info — uptime, CPU, RAM, array usage\\n/disks — disk status, temps, usage\\n/parity — parity status (/parity_start, /parity_pause, /parity_resume, /parity_cancel)\\n/syslog — recent warnings in the syslog\\n/notifications — unread Unraid notifications (/archive_all)\\n/vms — virtual machines',\n  '<b>Docker</b>\\n/containers — list with quick actions\\n/updates — check for image updates\\n/update_all — update everything (asks first)\\n/update_&lt;name&gt; · /restart_&lt;name&gt; · /start_&lt;name&gt; · /stop_&lt;name&gt; · /logs_&lt;name&gt;',\n].join('\\n\\n');\nreturn [{ json: { chatId: j.chatId, text } }];"
+      },
+      "id": "ac3fbed4-8993-4f9a-a533-6b34ef7b1d2b",
+      "name": "Help text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "replyKeyboard",
+        "replyKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "/status"
+                  },
+                  {
+                    "text": "/info"
+                  },
+                  {
+                    "text": "/disks"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "/containers"
+                  },
+                  {
+                    "text": "/updates"
+                  },
+                  {
+                    "text": "/syslog"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "/notifications"
+                  },
+                  {
+                    "text": "/parity"
+                  },
+                  {
+                    "text": "/help"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "replyKeyboardOptions": {
+          "resize_keyboard": true
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "122f86db-2f73-4238-a048-59970723a77f",
+      "name": "Send menu",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        -260
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "system",
+        "operation": "getHealthReport",
+        "healthOutput": "report",
+        "healthOptions": {}
+      },
+      "id": "403b53a2-a275-4333-ae91-fb62d13cb3d2",
+      "name": "Health report",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cmd = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\nconst chatId = $('Parse command').first().json.chatId;\nconst r = $input.first().json;\nif (r.error) return [{ json: { chatId, text: '❌ ' + esc(r.error) } }];\nconst icon = { ok: '✅', info: '🔵', warning: '🟠', critical: '🔴' };\nconst findings = (r.findings ?? []).slice(0, 8).map((f) => {\n  const a = f.suggestedAction;\n  const action = a?.resource === 'dockerContainer' && a.name ? `  /${a.operation}_${cmd(a.name)}` : '';\n  return `${icon[f.severity]} <b>${esc(f.title)}</b>${action}\\n    → ${esc(f.nextSteps?.[0] ?? '')}`;\n});\nconst text = [\n  `${icon[r.status]} <b>${esc(r.hostname)}</b> — ${esc(r.status)} · array ${esc(String(r.arrayState).toLowerCase())}`,\n  `${r.counts.critical} critical · ${r.counts.warning} warning · ${r.counts.info} info`,\n  findings.join('\\n') || 'No problems found.',\n  '/info  /disks  /syslog  /containers',\n].join('\\n\\n');\nreturn [{ json: { chatId, text: text.slice(0, 4000) } }];"
+      },
+      "id": "85013de3-98ce-4332-ac01-93faf88e8763",
+      "name": "Format status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "system",
+        "operation": "getInfo"
+      },
+      "id": "af47298a-49c6-4878-a412-5d7491ed9d4c",
+      "name": "System info",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        40
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "system",
+        "operation": "getMetrics"
+      },
+      "id": "50b0159b-71ee-4203-ac30-26398d58e7a8",
+      "name": "Metrics",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        400,
+        40
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "getStatus"
+      },
+      "id": "302a8419-1a46-43fe-af1b-c7a1dd70626e",
+      "name": "Array for info",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        520,
+        40
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parse command').first().json.chatId;\nconst info = $('System info').first().json;\nconst m = $('Metrics').first().json;\nconst a = $input.first().json;\nif (info.error) return [{ json: { chatId, text: '❌ ' + esc(info.error) } }];\nconst gb = (b) => (Number(b) / 1024 ** 3).toFixed(1);\nconst tb = (kb) => (Number(kb) / 1024 ** 3).toFixed(2);\nconst since = info.os?.uptime ? new Date(info.os.uptime) : null;\nconst up = since ? Math.floor((Date.now() - since) / 3600000) : null;\nconst kb = a.capacity?.kilobytes ?? {};\nconst text = [\n  `🖥️ <b>${esc(info.os?.hostname)}</b> — ${esc(info.os?.distro)} ${esc(info.os?.release)}`,\n  up !== null ? `⏱️ Up ${Math.floor(up / 24)}d ${up % 24}h` : '',\n  `🧠 ${esc(info.cpu?.brand)} — ${info.cpu?.cores}C/${info.cpu?.threads}T · load ${Math.round(m.cpu?.percentTotal ?? 0)}%`,\n  m.memory ? `💾 RAM ${Math.round(m.memory.percentTotal)}% of ${gb(m.memory.total)} GB (available ${gb(m.memory.available)} GB)` : '',\n  kb.total ? `🗄️ Array ${esc(String(a.state).toLowerCase())} — ${tb(kb.used)} / ${tb(kb.total)} TB used (${Math.round((kb.used / kb.total) * 100)}%)` : '',\n].filter(Boolean).join('\\n');\nreturn [{ json: { chatId, text } }];"
+      },
+      "id": "5089cd2c-8e00-47bb-a466-bc76156565c1",
+      "name": "Format info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "getStatus"
+      },
+      "id": "abe49c55-c718-4a16-af2f-b41c8e1fee10",
+      "name": "Array for disks",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        180
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parse command').first().json.chatId;\nconst a = $input.first().json;\nif (a.error) return [{ json: { chatId, text: '❌ ' + esc(a.error) } }];\nconst line = (d) => {\n  const used = d.fsSize ? Math.round((Number(d.fsUsed) / Number(d.fsSize)) * 100) + '%' : '';\n  const temp = d.temp === null || d.temp === undefined ? (d.isSpinning === false ? '💤' : '–') : d.temp + '°C';\n  const ok = d.status === 'DISK_OK';\n  const errs = Number(d.numErrors) > 0 ? ` · ⚠️ ${d.numErrors} errors` : '';\n  return `${ok ? '🟢' : '🔴'} <b>${esc(d.name)}</b> (${esc(d.device ?? '')}) ${temp}${used ? ' · ' + used + ' used' : ''}${ok ? '' : ' · ' + esc(d.status)}${errs}`;\n};\nconst group = (title, list) => (list?.length ? `<b>${title}</b>\\n` + list.map(line).join('\\n') : '');\nconst p = a.parityCheckStatus ?? {};\nconst text = [\n  `💽 Array <b>${esc(String(a.state).toLowerCase())}</b>`,\n  group('Parity', a.parities), group('Data', a.disks), group('Pools', a.caches),\n  `Parity check: ${esc(String(p.status ?? 'unknown').toLowerCase())}${p.running ? ` (${p.progress}%)` : ''}${p.date ? ' · last ' + new Date(p.date).toISOString().slice(0, 10) : ''}${p.errors ? ' · ' + p.errors + ' errors' : ''}`,\n  '/parity  /syslog  /status',\n].filter(Boolean).join('\\n\\n');\nreturn [{ json: { chatId, text: text.slice(0, 4000) } }];"
+      },
+      "id": "72bb8ebd-0118-4299-a851-8ce439803d8f",
+      "name": "Format disks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst j = $input.first().json;\nconst action = ['start', 'pause', 'resume', 'cancel'].includes(j.arg) ? j.arg : 'status';\nif (action === 'start' && !j.confirmed) {\n  return [{ json: { ...j, parityAction: 'reply', text: '⚠️ Start a (non-correcting) parity check? It reads every disk for many hours.\\nTap /parity_start_confirm to proceed.' } }];\n}\nreturn [{ json: { ...j, parityAction: action } }];"
+      },
+      "id": "cad77a40-1243-43c9-ac2c-e84853ac638d",
+      "name": "Parity plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5da479d9-57c1-4045-ac55-d0506b5c0b25",
+                    "leftValue": "={{ $json.parityAction }}",
+                    "rightValue": "reply",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reply"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "98aeaffc-ccc1-477a-a37e-1aa8648b6d10",
+                    "leftValue": "={{ $json.parityAction }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4aafcda9-e9a3-4f95-a4c6-439718196b11",
+                    "leftValue": "={{ $json.parityAction }}",
+                    "rightValue": "start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cf077ec7-0c0e-4ecc-a425-0ff8ad8bdd07",
+                    "leftValue": "={{ $json.parityAction }}",
+                    "rightValue": "pause",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pause"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c32ffd45-e4ae-4fc5-aa24-a1de996a1f90",
+                    "leftValue": "={{ $json.parityAction }}",
+                    "rightValue": "resume",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "resume"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a5aa41f1-f859-4511-ae48-61e09e3de0da",
+                    "leftValue": "={{ $json.parityAction }}",
+                    "rightValue": "cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "other"
+        }
+      },
+      "id": "da7a18a6-a46f-436b-af26-9f9fe6c88087",
+      "name": "Parity action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        380,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "getParityHistory"
+      },
+      "id": "e6babb59-cd01-4de3-a669-7262100faaca",
+      "name": "Parity history",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        600,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst plan = $('Parity plan').first().json;\nconst j = $input.first().json;\nconst text = j.error ? `❌ Parity ${esc(plan.parityAction)} failed: ${esc(j.error)}` : `✅ Parity check: ${esc(plan.parityAction)} sent. Check progress with /parity`;\nreturn [{ json: { chatId: plan.chatId, text } }];"
+      },
+      "id": "e3914125-1a5c-4e94-a684-d86abdfdd614",
+      "name": "Format parity action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "startParityCheck",
+        "correct": false
+      },
+      "id": "891b8a74-5a48-4e4d-a468-233055c259c0",
+      "name": "Parity start",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        600,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "pauseParityCheck"
+      },
+      "id": "daed3636-5755-4e29-a1f6-6163de85f592",
+      "name": "Parity pause",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        600,
+        490
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "resumeParityCheck"
+      },
+      "id": "d34729ee-4bda-4962-ad6c-41a97952f79b",
+      "name": "Parity resume",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        600,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "array",
+        "operation": "cancelParityCheck"
+      },
+      "id": "ed7da7e0-05bd-45df-a76f-5116cbf99df3",
+      "name": "Parity cancel",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        600,
+        630
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parity plan').first().json.chatId;\nconst runs = $input.all().map((i) => i.json).filter((r) => r.date).sort((a, b) => String(b.date).localeCompare(String(a.date)));\nif ($input.first()?.json.error) return [{ json: { chatId, text: '❌ ' + esc($input.first().json.error) } }];\nconst fmt = (r) => `• ${new Date(r.date).toISOString().slice(0, 10)} — ${esc(String(r.status).toLowerCase())}, ${Math.round((r.duration ?? 0) / 3600)}h, ${r.errors ?? 0} errors${r.running ? ` (running ${r.progress}%)` : ''}`;\nconst text = [\n  '🧮 <b>Parity checks</b>',\n  runs.slice(0, 5).map(fmt).join('\\n') || 'No parity history.',\n  '/parity_start  /parity_pause  /parity_resume  /parity_cancel',\n].join('\\n\\n');\nreturn [{ json: { chatId, text } }];"
+      },
+      "id": "8f531afe-ea09-41e1-acdd-530de7c7a55e",
+      "name": "Format parity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "logFile",
+        "operation": "read",
+        "logPath": "/var/log/syslog",
+        "lines": 2000,
+        "logOptions": {
+          "analyze": true,
+          "minSeverity": "warning",
+          "output": "single"
+        }
+      },
+      "id": "48640f2d-1a43-4426-a492-a04bc095b251",
+      "name": "Read syslog",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        600
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parse command').first().json.chatId;\nconst j = $input.first().json;\nif (j.error) return [{ json: { chatId, text: '❌ ' + esc(j.error) } }];\nconst lines = j.lines ?? [];\nconst mark = { critical: '🔴', warning: '🟠' };\nconst byCat = {};\nfor (const l of lines) byCat[l.category] = (byCat[l.category] ?? 0) + 1;\nconst recent = lines.slice(-12).map((l) => `${mark[l.severity] ?? ''} ${l.line}`);\nlet body = recent.join('\\n');\nif (body.length > 2800) body = '…' + body.slice(-2800);\nconst steps = [...new Set(lines.filter((l) => l.severity === 'critical').flatMap((l) => l.nextSteps ?? []))].slice(0, 3);\nconst text = lines.length\n  ? [\n      `📋 <b>Syslog</b>: ${lines.length} warning/critical line(s) in the last 2000 lines`,\n      Object.entries(byCat).map(([c, n]) => `${esc(c)}: ${n}`).join(' · '),\n      `<pre>${esc(body)}</pre>`,\n      steps.length ? '<b>Next steps</b>\\n' + steps.map((s, i) => `${i + 1}. ${esc(s)}`).join('\\n') : '',\n    ].filter(Boolean).join('\\n\\n')\n  : '✅ No warnings in the last 2000 syslog lines.';\nreturn [{ json: { chatId, text: text.slice(0, 4000) } }];"
+      },
+      "id": "fcfc31a0-6747-4bd3-a513-69c8e0102309",
+      "name": "Format syslog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "notification",
+        "operation": "getAll",
+        "notificationType": "UNREAD",
+        "importanceFilter": "",
+        "limit": 10
+      },
+      "id": "fc0921ba-c86c-43c1-ae69-17555207c69c",
+      "name": "Unread notifications",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        740
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parse command').first().json.chatId;\nconst list = $input.all().map((i) => i.json).filter((n) => n.id);\nif ($input.first()?.json.error) return [{ json: { chatId, text: '❌ ' + esc($input.first().json.error) } }];\nconst icon = { ALERT: '🔴', WARNING: '🟠', INFO: '🔵' };\nconst text = list.length\n  ? `🔔 <b>${list.length} unread notification(s)</b>\\n\\n` + list.map((n) => `${icon[n.importance] ?? '⚪'} <b>${esc(n.subject)}</b>\\n    ${esc(n.description)} <i>(${esc(n.formattedTimestamp ?? n.timestamp ?? '')})</i>`).join('\\n') + '\\n\\nArchive all: /archive_all'\n  : '✅ No unread notifications.';\nreturn [{ json: { chatId, text: text.slice(0, 4000) } }];"
+      },
+      "id": "b74f7769-d18f-480c-a334-d04fba2f7011",
+      "name": "Format notifications",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "notification",
+        "operation": "archiveAll",
+        "importanceFilter": ""
+      },
+      "id": "d7d4dacd-8b88-4043-aad6-9e986c838506",
+      "name": "Archive notifications",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        880
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parse command').first().json.chatId;\nconst j = $input.first().json;\nconst text = j.error ? '❌ ' + esc(j.error) : `🗂️ Archived. Unread now: ${j.unread?.total ?? 0}, archived: ${j.archive?.total ?? '?'}`;\nreturn [{ json: { chatId, text } }];"
+      },
+      "id": "cd6c478a-4319-49ac-a14e-10c0b1322a50",
+      "name": "Format archive",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "vm",
+        "operation": "getAll"
+      },
+      "id": "f545a2cf-9c42-4b7d-acb3-d3d73b054299",
+      "name": "Virtual machines",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        280,
+        1020
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst chatId = $('Parse command').first().json.chatId;\nconst list = $input.all().map((i) => i.json).filter((v) => v.id);\nif ($input.first()?.json.error) return [{ json: { chatId, text: '❌ ' + esc($input.first().json.error) } }];\nconst text = list.length\n  ? '🖥️ <b>Virtual machines</b>\\n' + list.map((v) => `${v.state === 'RUNNING' ? '🟢' : '⚪'} <b>${esc(v.name)}</b> — ${esc(String(v.state).toLowerCase())}`).join('\\n')\n  : 'No virtual machines defined.';\nreturn [{ json: { chatId, text } }];"
+      },
+      "id": "1a1e8ee9-5ca4-439e-aa19-ca43f29118b3",
+      "name": "Format VMs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        1020
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "0ae6e1c6-e078-4c29-ab30-aeb8928f5ed7",
+      "name": "Run Docker workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        280,
+        1160
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Bot settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bot settings": {
+      "main": [
+        [
+          {
+            "node": "Parse command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse command": {
+      "main": [
+        [
+          {
+            "node": "Authorized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorized?": {
+      "main": [
+        [
+          {
+            "node": "Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not authorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not authorized": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Command": {
+      "main": [
+        [
+          {
+            "node": "Help text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Health report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "System info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Array for disks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parity plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read syslog",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unread notifications",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Archive notifications",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Virtual machines",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run Docker workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Help text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Help text": {
+      "main": [
+        [
+          {
+            "node": "Send menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Health report": {
+      "main": [
+        [
+          {
+            "node": "Format status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format status": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "System info": {
+      "main": [
+        [
+          {
+            "node": "Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrics": {
+      "main": [
+        [
+          {
+            "node": "Array for info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Array for info": {
+      "main": [
+        [
+          {
+            "node": "Format info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format info": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Array for disks": {
+      "main": [
+        [
+          {
+            "node": "Format disks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format disks": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity plan": {
+      "main": [
+        [
+          {
+            "node": "Parity action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity action": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parity history",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parity start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parity pause",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parity resume",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parity cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity start": {
+      "main": [
+        [
+          {
+            "node": "Format parity action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity pause": {
+      "main": [
+        [
+          {
+            "node": "Format parity action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity resume": {
+      "main": [
+        [
+          {
+            "node": "Format parity action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity cancel": {
+      "main": [
+        [
+          {
+            "node": "Format parity action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format parity action": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parity history": {
+      "main": [
+        [
+          {
+            "node": "Format parity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format parity": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read syslog": {
+      "main": [
+        [
+          {
+            "node": "Format syslog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format syslog": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unread notifications": {
+      "main": [
+        [
+          {
+            "node": "Format notifications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format notifications": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive notifications": {
+      "main": [
+        [
+          {
+            "node": "Format archive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format archive": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Virtual machines": {
+      "main": [
+        [
+          {
+            "node": "Format VMs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format VMs": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

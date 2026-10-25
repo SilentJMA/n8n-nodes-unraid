@@ -1,0 +1,954 @@
+{
+  "name": "Unraid · Docker updates & actions",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Unraid · Docker updates & actions\n- **Weekly update window** (Sunday 04:00): refreshes image digests and updates every container with a new image, except **cfg.excludeFromUpdates**. Reports to Telegram only when something was updated or failed.\n- **From Telegram bot**: commands forwarded by the *Sysadmin & Telegram bot* workflow:\n  /containers · /updates · /update_all · /update_<name> · /restart_<name> · /start_<name> · /stop_<name> · /logs_<name>\n  /update_all and /stop_<name> ask for confirmation first (tap the _confirm command).\n\nContainer names in commands use underscores (Plex-Media-Server → /logs_plex_media_server).",
+        "width": 620,
+        "height": 360
+      },
+      "id": "a622bccd-a3e8-44b1-abc5-50a22370b4f7",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Setup\n1. Select the **Unraid API** and **Telegram** credentials.\n2. **Settings**: set **cfg.telegramChatId** (for the weekly report) and the containers to exclude from automatic updates. Keep **n8n** excluded: updating it recreates the container running this workflow, so the run is cut off. Update n8n by hand.\n3. Publish / activate: the schedule needs it, and the bot calls the published version.\n4. Copy this workflow's ID (from its URL) into the bot workflow's **Run Docker workflow** node.",
+        "width": 480,
+        "height": 360,
+        "color": 4
+      },
+      "id": "b504b21f-feb9-4c3e-a0a1-2a3fff1231da",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "89bc69bb-8abc-42a0-a12e-64ba8bcfe7ff",
+      "name": "From Telegram bot",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -680,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "49f737ce-b019-445f-a097-3f4084e8ad21",
+      "name": "Weekly update window",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8cea2464-9727-4c11-a44e-d93a0ef16782",
+              "name": "cfg.telegramChatId",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "53fa61c1-c7f9-470e-ad73-9a28a0d77930",
+              "name": "cfg.excludeFromUpdates",
+              "value": "n8n, mariadb, postgres, nextcloud",
+              "type": "string"
+            },
+            {
+              "id": "9bceb067-745b-4203-ab0a-d55f85dbcbec",
+              "name": "cfg.logLines",
+              "value": 30,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "084359c3-4435-4131-aff3-6d9c57df1655",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -440,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cmd = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\n// Turns the bot's { chatId, command, arg, confirmed } (or a schedule run) into one action.\nreturn $input.all().map(({ json: j }) => {\n  const chatId = j.chatId || j.cfg.telegramChatId;\n  const command = j.command || 'scheduled';\n  const arg = String(j.arg ?? '').trim();\n  const out = { chatId, command, arg, scheduled: !j.command, cfg: j.cfg };\n  const usage = (c) => ({ ...out, action: 'reply', text: `Usage: /${c}_&lt;container&gt; — see /containers` });\n  if (command === 'scheduled') return { json: { ...out, action: 'updateAll' } };\n  if (command === 'containers') return { json: { ...out, action: 'list' } };\n  if (command === 'updates') return { json: { ...out, action: 'updates' } };\n  if (command === 'update') {\n    if (!arg) return { json: usage('update') };\n    if (arg === 'all') {\n      return { json: j.confirmed ? { ...out, action: 'updateAll' } : { ...out, action: 'reply', text: '⚠️ Update every container that has an update (except excluded ones)?\\nTap /update_all_confirm to proceed.' } };\n    }\n    return { json: { ...out, action: 'updateNames', names: arg.split(/[\\s,]+/).filter(Boolean) } };\n  }\n  if (['restart', 'start', 'stop', 'logs'].includes(command)) {\n    if (!arg) return { json: usage(command) };\n    if (command === 'stop' && !j.confirmed) {\n      return { json: { ...out, action: 'reply', text: `⚠️ Stop <b>${esc(arg)}</b>?\\nTap /stop_${cmd(arg)}_confirm to proceed.` } };\n    }\n    return { json: { ...out, action: command, container: arg } };\n  }\n  return { json: { ...out, action: 'reply', text: `Unknown Docker command /${esc(command)}. Try /help` } };\n});"
+      },
+      "id": "a42e23e2-2b64-46aa-a7f8-51ceb2d4f7ce",
+      "name": "Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3d741b49-1adb-4b47-a75f-66e3ce360337",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "reply",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reply"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "827d423e-7142-44d6-a45a-5ba1e6d85436",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "61723ed1-8482-4199-a13d-fba0f974a208",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "updates",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "updates"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7172dab7-b2e3-47e2-a196-97f45a1f66a1",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "updateAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "updateAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7a6f5c02-cf42-462d-a64c-05ef4946d039",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "updateNames",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "updateNames"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7c9f891f-bbae-4679-ae18-876049b65793",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "restart",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "restart"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d5f41d6f-ed23-4b35-a058-ce31eb307a7b",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "19f6f013-0f99-435b-a7c6-f3080a873691",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "stop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stop"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c73a55f6-7256-407f-a1b6-0258eeb351c9",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "logs",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "logs"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "other"
+        }
+      },
+      "id": "cf8b7065-8170-407c-a8b6-3cd4a484d5b7",
+      "name": "Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        40,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "4beb60bf-cfcb-4bb9-a2c7-ebad8482f510",
+      "name": "Send reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1500,
+        260
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "getAll",
+        "containerFilters": {}
+      },
+      "id": "feb22627-5233-4903-a648-09f30cea5520",
+      "name": "List containers",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        300,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cmd = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\nconst chatId = $('Plan').first().json.chatId;\nconst items = $input.all().map((i) => i.json).filter((c) => c.name);\nif ($input.first()?.json.error) return [{ json: { chatId, text: '❌ ' + esc($input.first().json.error) } }];\nconst icon = { RUNNING: '🟢', PAUSED: '⏸️', EXITED: '🔴' };\nconst lines = items.map((c) => `${icon[c.state] ?? '⚪'} <b>${esc(c.name)}</b>${c.isUpdateAvailable ? ' ⬆️' : ''} — ${esc(c.status)}\\n    /logs_${cmd(c.name)}  /restart_${cmd(c.name)}${c.state === 'RUNNING' ? '' : '  /start_' + cmd(c.name)}`);\nconst running = items.filter((c) => c.state === 'RUNNING').length;\nreturn [{ json: { chatId, text: `🐳 <b>${items.length} containers</b> (${running} running)\\n\\n${lines.join('\\n')}`.slice(0, 4000) } }];"
+      },
+      "id": "3644dc60-5dd7-4be3-a32b-925caedf606a",
+      "name": "Format containers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "checkForUpdates"
+      },
+      "id": "048d12f4-64be-45ab-ae77-9e131eeb9555",
+      "name": "Refresh digests",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        300,
+        160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cmd = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\nconst chatId = $('Plan').first().json.chatId;\nconst j = $input.first().json;\nif (j.error) return [{ json: { chatId, text: '❌ ' + esc(j.error) } }];\nconst names = j.updatesAvailable ?? [];\nconst text = names.length\n  ? `⬆️ <b>${names.length} update(s) available</b>\\n\\n${names.map((n) => `• ${esc(n)}  /update_${cmd(n)}`).join('\\n')}\\n\\nUpdate all (except excluded): /update_all`\n  : '✅ All containers are up to date.';\nreturn [{ json: { chatId, text } }];"
+      },
+      "id": "9d570269-50e8-4ae5-a590-f1fd876dcfe5",
+      "name": "Format updates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "checkForUpdates"
+      },
+      "id": "39820c5a-b183-485f-ad61-28149ab30bc2",
+      "name": "Refresh before update",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        300,
+        320
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "getAll",
+        "containerFilters": {
+          "updatesOnly": true
+        }
+      },
+      "id": "7abec7ac-1c48-4f0c-a89d-39329ca28508",
+      "name": "Containers with updates",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        540,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Databases and other stateful apps are best updated by hand; list them in Settings.\nconst cfg = $('Plan').first().json.cfg ?? {};\nconst excluded = new Set(String(cfg.excludeFromUpdates ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));\nconst all = $input.all().map((i) => i.json.name).filter(Boolean);\nreturn [{ json: { names: all.filter((n) => !excluded.has(n.toLowerCase())), skipped: all.filter((n) => excluded.has(n.toLowerCase())) } }];"
+      },
+      "id": "c2013e7b-4945-40fa-afc5-9fd0fc6893e7",
+      "name": "Apply exclusions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fef1537b-4f08-46b9-a759-6ca4c9eb0088",
+              "leftValue": "={{ $json.names.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5fef20ce-7191-40ea-a698-95cd0a33cf24",
+      "name": "Anything to update?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1020,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "update",
+        "containers": "={{ $json.names }}"
+      },
+      "id": "77c996f1-0bcb-4e96-ae80-f2cdae1a4dd8",
+      "name": "Update containers",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst plan = $('Plan').first().json;\nconst skipped = $('Apply exclusions').isExecuted ? ($('Apply exclusions').first().json.skipped ?? []) : [];\nconst items = $input.all().map((i) => i.json);\nconst skippedLine = skipped.length ? `\\nSkipped (excluded): ${esc(skipped.join(', '))}` : '';\nlet text;\nif (items.some((i) => i.error)) {\n  text = `❌ <b>Update failed</b>\\n${esc(items.map((i) => i.error).filter(Boolean).join('\\n'))}`;\n} else if (!items.some((i) => i.name)) {\n  // Nothing to update: stay quiet on the weekly run.\n  if (plan.scheduled) return [];\n  text = `✅ Nothing to update.${skippedLine}`;\n} else {\n  const done = items.filter((i) => i.name).map((i) => `• <b>${esc(i.name)}</b>: ${esc(String(i.state).toLowerCase())} (${esc(i.image)})`);\n  text = `⬆️ <b>Updated ${done.length} container(s)</b>${plan.scheduled ? ' (weekly window)' : ''}\\n${done.join('\\n')}${skippedLine}`;\n}\nreturn [{ json: { chatId: plan.chatId, text } }];"
+      },
+      "id": "acb6e236-ad1a-4ec9-a3f3-55e389b26610",
+      "name": "Format update result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst plan = $('Plan').first().json;\nconst j = $input.first().json;\nconst verb = { restart: 'Restarted', start: 'Started', stop: 'Stopped' }[plan.action];\nconst text = j.error\n  ? `❌ ${esc(plan.action)} <b>${esc(plan.container)}</b> failed: ${esc(j.error)}`\n  : `✅ ${verb} <b>${esc(j.name)}</b> — ${esc(String(j.state).toLowerCase())} (${esc(j.status)})`;\nreturn [{ json: { chatId: plan.chatId, text } }];"
+      },
+      "id": "4c329c51-cf13-4388-afff-dd112dace758",
+      "name": "Format container action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "restart",
+        "container": "={{ $json.container }}"
+      },
+      "id": "ead3ed6d-a24e-4af0-a4a5-a9cd3794dabc",
+      "name": "Restart container",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        780,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "start",
+        "container": "={{ $json.container }}"
+      },
+      "id": "62024b3d-a4c6-455e-a32b-d3233f19a45a",
+      "name": "Start container",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        780,
+        700
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "stop",
+        "container": "={{ $json.container }}"
+      },
+      "id": "913deb1b-76a4-48aa-af29-e357d9974518",
+      "name": "Stop container",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        780,
+        840
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "dockerContainer",
+        "operation": "getLogs",
+        "container": "={{ $json.container }}",
+        "tail": "={{ $json.cfg.logLines }}",
+        "logOptions": {
+          "analyze": true,
+          "minSeverity": "all",
+          "output": "single"
+        }
+      },
+      "id": "48205511-514f-474c-a2de-8d2faf7bbe8f",
+      "name": "Container logs",
+      "type": "CUSTOM.unraid",
+      "typeVersion": 1,
+      "position": [
+        780,
+        980
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cmd = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\nconst plan = $('Plan').first().json;\nconst j = $input.first().json;\nif (j.error) return [{ json: { chatId: plan.chatId, text: `❌ Logs of <b>${esc(plan.container)}</b>: ${esc(j.error)}` } }];\nconst mark = { critical: '🔴', warning: '🟠', info: '🔵' };\nconst lines = (j.lines ?? []).map((l) => `${l.severity ? mark[l.severity] + ' ' : ''}${l.line}`);\nconst flagged = (j.lines ?? []).filter((l) => l.severity === 'critical' || l.severity === 'warning');\nlet body = lines.join('\\n');\nif (body.length > 3000) body = '…' + body.slice(-3000);\nconst steps = [...new Set(flagged.flatMap((l) => l.nextSteps ?? []))].slice(0, 3);\nconst text = [\n  `📜 <b>${esc(j.container)}</b> — last ${lines.length} line(s)${flagged.length ? `, ${flagged.length} flagged` : ''}`,\n  `<pre>${esc(body) || '(empty)'}</pre>`,\n  steps.length ? '<b>Next steps</b>\\n' + steps.map((s, i) => `${i + 1}. ${esc(s)}`).join('\\n') : '',\n  `/restart_${cmd(j.container)}  /containers`,\n].filter(Boolean).join('\\n\\n');\nreturn [{ json: { chatId: plan.chatId, text: text.slice(0, 4000) } }];"
+      },
+      "id": "95227c13-698d-40b5-a35e-cff46bb0d764",
+      "name": "Format logs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        980
+      ]
+    }
+  ],
+  "connections": {
+    "From Telegram bot": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly update window": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "node": "Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List containers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refresh digests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refresh before update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update containers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Restart container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Start container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Container logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List containers": {
+      "main": [
+        [
+          {
+            "node": "Format containers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format containers": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh digests": {
+      "main": [
+        [
+          {
+            "node": "Format updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format updates": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh before update": {
+      "main": [
+        [
+          {
+            "node": "Containers with updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Containers with updates": {
+      "main": [
+        [
+          {
+            "node": "Apply exclusions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply exclusions": {
+      "main": [
+        [
+          {
+            "node": "Anything to update?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to update?": {
+      "main": [
+        [
+          {
+            "node": "Update containers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format update result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update containers": {
+      "main": [
+        [
+          {
+            "node": "Format update result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format update result": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restart container": {
+      "main": [
+        [
+          {
+            "node": "Format container action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start container": {
+      "main": [
+        [
+          {
+            "node": "Format container action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop container": {
+      "main": [
+        [
+          {
+            "node": "Format container action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format container action": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container logs": {
+      "main": [
+        [
+          {
+            "node": "Format logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format logs": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

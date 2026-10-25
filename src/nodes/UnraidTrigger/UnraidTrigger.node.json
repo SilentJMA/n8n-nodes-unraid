@@ -1,0 +1,9 @@
+{
+	"node": "@silentjma/n8n-nodes-unraid.unraidTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Development", "Utility"],
+	"resources": {
+		"primaryDocumentation": [{ "url": "https://docs.unraid.net/API/" }]
+	}
+}

@@ -1,0 +1,83 @@
+name: Release
+
+# Push a tag v<version> (matching package.json) to publish to npm and create the GitHub release.
+# Run manually (workflow_dispatch) to publish the current package.json version from main.
+# Needs the repository secret NPM_TOKEN: an npm automation/granular token with publish rights on @silentjma.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Read version
+        id: meta
+        run: |
+          echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Tag matches package.json
+        if: github.ref_type == 'tag'
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "v${{ steps.meta.outputs.version }}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${{ steps.meta.outputs.version }}"
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Already on npm?
+        id: npm
+        run: |
+          if npm view "${{ steps.meta.outputs.name }}@${{ steps.meta.outputs.version }}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${{ steps.meta.outputs.name }}@${{ steps.meta.outputs.version }} is already on npm, skipping publish"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        if: steps.npm.outputs.published == 'false'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::Repository secret NPM_TOKEN is not set"
+            exit 1
+          fi
+          npm publish --provenance --access public
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          npm pack
+          TGZ="silentjma-n8n-nodes-unraid-${VERSION}.tgz"
+          NOTES=$(awk -v v="## ${VERSION}" 'index($0, v) == 1 {p=1; next} /^## / && p {exit} p' CHANGELOG.md)
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            gh release upload "v${VERSION}" "$TGZ" workflows/*.json --clobber
+          else
+            gh release create "v${VERSION}" "$TGZ" workflows/*.json --title "v${VERSION}" --notes "${NOTES:-See CHANGELOG.md}"
+          fi

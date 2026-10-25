@@ -2,6 +2,13 @@
 
 All notable changes to this package. Versions follow [semver](https://semver.org/).
 
+## Unreleased
+
+### Project
+- Community files: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, issue and pull request templates, Dependabot.
+- CI on every push and pull request. A release workflow publishes to npm with provenance when a `v*` tag is pushed.
+- Buy Me a Coffee funding link.
+
 ## 0.1.0 - 2026-10-25
 
 First release.

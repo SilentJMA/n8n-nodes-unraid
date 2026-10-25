@@ -1,5 +1,10 @@
 # @silentjma/n8n-nodes-unraid
 
+[![npm](https://img.shields.io/npm/v/@silentjma/n8n-nodes-unraid?logo=npm)](https://www.npmjs.com/package/@silentjma/n8n-nodes-unraid)
+[![CI](https://github.com/SilentJMA/n8n-nodes-unraid/actions/workflows/ci.yml/badge.svg)](https://github.com/SilentJMA/n8n-nodes-unraid/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/kilwanitrod)
+
 Unofficial n8n community nodes for the [Unraid API](https://docs.unraid.net/API/) (GraphQL, [unraid/api](https://github.com/unraid/api)).
 
 - **Unraid**: an action node for System, Array, Disk, Share, Docker Container, Virtual Machine, Log File and Notification, plus a Custom GraphQL operation.
@@ -120,6 +125,17 @@ npm pack   # -> silentjma-n8n-nodes-unraid-0.1.0.tgz
 ```
 
 The queries in [src/lib/queries.ts](src/lib/queries.ts) are written against `api/generated-schema.graphql` from the unraid/api repository. Check them again when Unraid changes the schema.
+
+## Support and contributing
+
+- **Questions:** [Discussions › Q&A](https://github.com/SilentJMA/n8n-nodes-unraid/discussions/categories/q-a). Common problems are listed in [SUPPORT.md](SUPPORT.md).
+- **Bugs and feature requests:** [open an issue](https://github.com/SilentJMA/n8n-nodes-unraid/issues/new/choose) using the templates. Never paste API keys or tokens.
+- **Security:** report privately, see [SECURITY.md](SECURITY.md).
+- **Contributing:** pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+If these nodes save you time, you can support the project:
+
+<a href="https://www.buymeacoffee.com/kilwanitrod"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=kilwanitrod&button_colour=FFDD00&font_colour=000000&font_family=Inter&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" height="40"></a>
 
 ## License
 

@@ -45,16 +45,30 @@ Keep these true in every change.
 
 ## Releasing
 
-1. Bump `version` in `package.json` with semver: a new operation or rule is a minor bump, a fix is a patch.
-2. Add a dated section to `CHANGELOG.md`.
-3. Run the gates, then `npm pack`. Check the tarball contains only `dist/`, `README.md`, `CHANGELOG.md`, `LICENSE` and `package.json`: `tar -tzf silentjma-n8n-nodes-unraid-<v>.tgz`.
-4. Commit: `Release <v>`. Use plain commit messages without trailers.
-5. Tag and create the GitHub release with the tarball and the three workflows attached:
-   ```bash
-   git tag v<v> && git push origin main --tags
-   gh release create v<v> silentjma-n8n-nodes-unraid-<v>.tgz workflows/*.json --title "v<v>" --notes-file <notes>
-   ```
-6. Publish to npm (needs `npm login` as `silentjma`): `npm publish`. `publishConfig.access` is `public`, and `prepublishOnly` runs the gates again.
+Releases are published by [.github/workflows/release.yml](.github/workflows/release.yml), never from a laptop.
+
+1. Bump `version` in `package.json` using semver:
+   - **patch:** fixes and rule tweaks
+   - **minor:** new operations, events or rules
+   - **major:** a saved workflow could behave differently
+2. In `CHANGELOG.md`, rename **Unreleased** to `## <version> - <YYYY-MM-DD>` and start a new empty **Unreleased** section.
+3. Run the gates locally, then commit: `Release <version>`. Use plain commit messages without trailers.
+4. Tag and push: `git tag v<version> && git push origin main v<version>`.
+5. The workflow then:
+   - checks the tag matches `package.json`
+   - runs the gates
+   - publishes with `npm publish --provenance --access public`, using the `NPM_TOKEN` repository secret
+   - creates the GitHub release with the tarball and `workflows/*.json`, with the notes taken from the changelog section
+6. Check [npm](https://www.npmjs.com/package/@silentjma/n8n-nodes-unraid) shows the new version with the provenance badge.
+
+To re-run a failed publish without a new tag, use **Actions › Release › Run workflow** on `main`. A version that is already on npm is skipped, and the release assets are refreshed.
+
+## Community
+
+- Issues use the templates in `.github/ISSUE_TEMPLATE/`. Questions go to Discussions (Q&A), security reports to private advisories ([SECURITY.md](SECURITY.md)).
+- Triage labels: `bug`, `enhancement`, `triage`, `question`, `good first issue`, `help wanted`.
+- Every pull request needs green CI and the checklist in `.github/PULL_REQUEST_TEMPLATE.md`. Squash-merge.
+- Dependabot opens monthly update pull requests. Merge development-dependency updates when CI is green. Read the n8n-workflow changelog before bumping it.
 
 ## Deploying to a self-hosted n8n custom folder
 

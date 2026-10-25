@@ -23,6 +23,10 @@
   "bugs": {
     "url": "https://github.com/SilentJMA/n8n-nodes-unraid/issues"
   },
+  "funding": {
+    "type": "buymeacoffee",
+    "url": "https://www.buymeacoffee.com/kilwanitrod"
+  },
   "files": [
     "dist/credentials/**",
     "dist/nodes/**",

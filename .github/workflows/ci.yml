@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Workflows are up to date
+        run: |
+          npm run workflow
+          git diff --exit-code -- workflows/ || { echo "::error::workflows/*.json are stale: run npm run workflow and commit the result"; exit 1; }
+      - name: Package contents
+        run: npm pack --dry-run

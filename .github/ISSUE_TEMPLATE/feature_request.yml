@@ -1,0 +1,34 @@
+name: Feature request
+description: A new operation, trigger event, log rule or workflow command
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The task or problem, not only the solution
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: For API features, link the Unraid GraphQL field or mutation (https://github.com/unraid/api, api/generated-schema.graphql). For log rules, paste a real (redacted) log line.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Unraid node (operation)
+        - Unraid Trigger (event)
+        - Log / health rules
+        - Telegram workflows
+        - Documentation
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd like to open a pull request for this

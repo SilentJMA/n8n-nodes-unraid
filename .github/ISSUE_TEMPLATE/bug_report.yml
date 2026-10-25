@@ -1,0 +1,77 @@
+name: Bug report
+description: A node, trigger or workflow does not behave as documented
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Never paste your Unraid API key or Telegram bot token.** Redact hostnames and IPs if you prefer.
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: Settings › Community Nodes in n8n, or `version` in the package.json of your custom folder
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: n8n-version
+    attributes:
+      label: n8n version
+      placeholder: 2.44.6
+    validations:
+      required: true
+  - type: input
+    id: unraid-version
+    attributes:
+      label: Unraid version
+      placeholder: 7.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is the package installed?
+      options:
+        - Community Nodes (npm)
+        - Custom folder (~/.n8n/custom)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Node / operation / event
+      description: e.g. Unraid › Docker Container › Update, Unraid Trigger › Log File Line, or the workflow and command
+      placeholder: Unraid › Docker Container › Get Logs
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message
+      description: The full error from the node output or the n8n log (redact secrets)
+      render: text
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add the Unraid node with …
+        2. Run …
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed API keys, tokens and passwords from everything above
+          required: true
+        - label: The credential test (Credentials › Unraid API › Test) passes, or the bug is about the credential itself

@@ -9,7 +9,7 @@ All notable changes to this package. Versions follow [semver](https://semver.org
 Passes n8n's community package scanner (`npx @n8n/scan-community-package @silentjma/n8n-nodes-unraid`).
 
 ### Fixed
-- `package.json`: `author` now includes an email, which the scanner requires (`valid-author`).
+- `package.json`: `author` now includes the npm owner's email. The scanner requires an author email (`valid-author`), and n8n's Creator Portal reads it from npm to match the package to its owner ("Error getting author email from npm").
 - Nodes declare their inputs and outputs with `NodeConnectionTypes.Main`.
 - Errors from an operation are always raised as `NodeApiError` or `NodeOperationError`, with the item index, so n8n shows them properly per item.
 - An invalid log filter pattern now fails with a clear node error. It no longer throws a plain `Error` from the log helpers.

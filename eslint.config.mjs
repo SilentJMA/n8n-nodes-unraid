@@ -5,6 +5,9 @@ import { n8nCommunityNodesPlugin } from '@n8n/eslint-plugin-community-nodes';
 import n8nNodesBase from 'eslint-plugin-n8n-nodes-base';
 import tseslint from 'typescript-eslint';
 
+// n8n's standard layout: package.json's dist/<dir>/X.js maps to <dir>/X.ts at the repo root.
+const SOURCES = ['credentials/**/*.ts', 'nodes/**/*.ts', 'lib/**/*.ts'];
+
 export default tseslint.config(
 	{ ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.tgz'] },
 	js.configs.recommended,
@@ -19,24 +22,19 @@ export default tseslint.config(
 	// Same ruleset the scanner runs, scoped to the package sources.
 	{
 		...n8nCommunityNodesPlugin.configs.recommended,
-		files: ['src/**/*.ts'],
+		files: SOURCES,
 	},
 	{
-		files: ['src/**/*.ts'],
-		rules: {
-			'no-console': 'error',
-			// The rule looks up package.json's dist/credentials/*.js paths in an n8n-node layout without src/,
-			// so it cannot see unraidApi here. The scanner's tarball pass resolves it and passes.
-			'@n8n/community-nodes/no-credential-reuse': 'off',
-		},
+		files: SOURCES,
+		rules: { 'no-console': 'error' },
 	},
 	{
-		files: ['src/nodes/**/*.ts', 'src/credentials/**/*.ts'],
+		files: ['nodes/**/*.ts', 'credentials/**/*.ts'],
 		plugins: { 'n8n-nodes-base': n8nNodesBase },
 		rules: { ...n8nNodesBase.configs.community.rules },
 	},
 	{
-		files: ['src/credentials/**/*.ts'],
+		files: ['credentials/**/*.ts'],
 		rules: {
 			...n8nNodesBase.configs.credentials.rules,
 			// "Only applicable to nodes in the main repository": community credentials link to a full documentation URL.
@@ -45,7 +43,7 @@ export default tseslint.config(
 		},
 	},
 	{
-		files: ['src/nodes/**/*.node.ts'],
+		files: ['nodes/**/*.node.ts'],
 		rules: {
 			...n8nNodesBase.configs.nodes.rules,
 			// Superseded by @n8n/community-nodes/node-connection-type-literal (NodeConnectionTypes.Main); the scanner turns these off too.

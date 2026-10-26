@@ -19,5 +19,5 @@
 		"rootDir": ".",
 		"outDir": "dist"
 	},
-	"include": ["src/**/*.ts"]
+	"include": ["credentials/**/*.ts", "nodes/**/*.ts", "lib/**/*.ts"]
 }

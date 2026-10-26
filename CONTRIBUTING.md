@@ -36,7 +36,7 @@ To try your build in n8n:
 1. **Don't break saved workflows.** Resource, operation, parameter, trigger event and credential names are stored in users' workflows. Never rename or remove them. Add new ones instead. A change of meaning needs a new node version.
 2. **Follow the official schema.** Every GraphQL field must exist in [`api/generated-schema.graphql`](https://github.com/unraid/api/blob/main/api/generated-schema.graphql). Unraid rejects the whole query if one field is unknown.
 3. **Test the rules.** Every new or changed log rule needs a test with a real (redacted) log line in `tests/analysis.test.ts`. `generic-error` stays the last rule.
-4. **Keep the libraries pure.** `src/lib/analysis.ts` and `src/lib/logs.ts` must not import `n8n-workflow`.
+4. **Keep the libraries pure.** `lib/analysis.ts` and `lib/logs.ts` must not import `n8n-workflow`.
 5. **Regenerate the workflows.** If you change node parameters or rules the workflows use, run `npm run workflow` and commit the JSON. Never edit `workflows/*.json` by hand.
 6. **Pass the gates.** CI runs build, lint, typecheck, tests and `npm pack` on every pull request.
 7. **Update the changelog.** Add a line under **Unreleased** in `CHANGELOG.md`.

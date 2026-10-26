@@ -4,6 +4,15 @@ All notable changes to this package. Versions follow [semver](https://semver.org
 
 ## Unreleased
 
+## 0.1.2 - 2026-10-26
+
+Fixes n8n Creator Portal vetting ("Can't find credential file in repo").
+
+### Changed
+- Sources moved to n8n's standard layout: `credentials/`, `nodes/` and `lib/` at the repo root, no longer under `src/`. n8n's tools map `package.json`'s `dist/credentials/X.js` to `credentials/X.ts` in the repo. The published files and their `dist/` paths are unchanged.
+- The credential's *Ignore SSL Issues* field is now named `ignoreSslIssues`. n8n's lint rules treat any field name containing "cert" as a secret. Credentials saved with the old `allowUnauthorizedCerts` field keep working: it is still declared (hidden) and still read.
+- `npm run lint` no longer needs exemptions for n8n's `no-credential-reuse` and `credential-password-field` rules.
+
 ## 0.1.1 - 2026-10-26
 
 Passes n8n's community package scanner (`npx @n8n/scan-community-package @silentjma/n8n-nodes-unraid`).

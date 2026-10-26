@@ -28,14 +28,22 @@ export class UnraidApi implements ICredentialType {
 			required: true,
 			description: 'Created in Settings › Management Access › API Keys (or "unraid-api apikey --create"). Docker updates, array and VM control need the admin role.',
 		},
-		// A boolean switch, not a secret: the rule matches "cert" in the name. Renaming it would reset saved credentials.
-		// eslint-disable-next-line @n8n/community-nodes/credential-password-field
 		{
 			displayName: 'Ignore SSL Issues',
-			name: 'allowUnauthorizedCerts',
+			name: 'ignoreSslIssues',
 			type: 'boolean',
 			default: false,
 			description: 'Whether to connect even if the server uses a self-signed or otherwise invalid certificate (the default for Unraid on a LAN IP)',
+		},
+		// Pre-0.1.2 name of "Ignore SSL Issues". Kept hidden so credentials saved with it keep working:
+		// n8n only loads stored values for declared fields. The password option satisfies n8n's name-based
+		// lint rule (the name contains "cert"); it has no effect on a hidden field.
+		{
+			displayName: 'Ignore SSL Issues (Legacy)',
+			name: 'allowUnauthorizedCerts',
+			type: 'hidden',
+			typeOptions: { password: true },
+			default: false,
 		},
 	];
 
@@ -53,7 +61,7 @@ export class UnraidApi implements ICredentialType {
 			baseURL: '={{$credentials.serverUrl.replace(/\\/+$/, "")}}',
 			url: '/graphql',
 			method: 'POST',
-			skipSslCertificateValidation: '={{$credentials.allowUnauthorizedCerts}}',
+			skipSslCertificateValidation: '={{$credentials.ignoreSslIssues === true || $credentials.allowUnauthorizedCerts === true}}',
 			headers: { 'Content-Type': 'application/json' },
 			body: { query: '{ online info { os { hostname } } }' },
 		},

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { analyzeHealth, classifyLogLine, summarizeFindings } from '../src/lib/analysis';
-import { matchContainer } from '../src/lib/containers';
-import { filterLogLines, invalidPatternReason, splitLogContent } from '../src/lib/logs';
+import { analyzeHealth, classifyLogLine, summarizeFindings } from '../lib/analysis';
+import { matchContainer } from '../lib/containers';
+import { filterLogLines, invalidPatternReason, splitLogContent } from '../lib/logs';
 
 describe('classifyLogLine', () => {
 	it.each([

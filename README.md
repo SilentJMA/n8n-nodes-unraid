@@ -10,7 +10,7 @@ Unofficial n8n community nodes for the [Unraid API](https://docs.unraid.net/API/
 - **Unraid**: an action node for System, Array, Disk, Share, Docker Container, Virtual Machine, Log File and Notification, plus a Custom GraphQL operation.
 - **Unraid Trigger**: a polling trigger for new log lines (syslog or a container log), health problems, notifications, container state changes and container updates.
 
-Both nodes use the same built-in rules ([src/lib/analysis.ts](src/lib/analysis.ts)). The rules tag log lines and health findings as `info`, `warning` or `critical` and attach **suggested next steps**.
+Both nodes use the same built-in rules ([lib/analysis.ts](lib/analysis.ts)). The rules tag log lines and health findings as `info`, `warning` or `critical` and attach **suggested next steps**.
 
 ## Installation
 
@@ -133,7 +133,7 @@ npm run build && npm run lint && npm run typecheck && npm test
 npm pack   # -> silentjma-n8n-nodes-unraid-0.1.0.tgz
 ```
 
-The queries in [src/lib/queries.ts](src/lib/queries.ts) are written against `api/generated-schema.graphql` from the unraid/api repository. Check them again when Unraid changes the schema.
+The queries in [lib/queries.ts](lib/queries.ts) are written against `api/generated-schema.graphql` from the unraid/api repository. Check them again when Unraid changes the schema.
 
 ## Support and contributing
 

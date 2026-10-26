@@ -34,7 +34,8 @@ export async function unraidGraphql(
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: { query, variables },
 			json: true,
-			skipSslCertificateValidation: credentials.allowUnauthorizedCerts === true,
+			// allowUnauthorizedCerts: the field's name before 0.1.2, still set on older saved credentials.
+			skipSslCertificateValidation: credentials.ignoreSslIssues === true || credentials.allowUnauthorizedCerts === true,
 		})) as GraphqlResponse<IDataObject>;
 	} catch (error) {
 		throw new NodeApiError(this.getNode(), error as JsonObject, {

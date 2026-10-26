@@ -1,4 +1,4 @@
-// Deterministic asset copy: src/nodes/**/{*.svg,*.png,*.node.json} -> dist/nodes/** with hash verification.
+// Deterministic asset copy: nodes/**/{*.svg,*.png,*.node.json} -> dist/nodes/** with hash verification.
 'use strict';
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -6,7 +6,7 @@ const path = require('node:path');
 const { checkSvg } = require('./svg-check.cjs');
 
 const root = path.join(__dirname, '..');
-const srcRoot = path.join(root, 'src', 'nodes');
+const srcRoot = path.join(root, 'nodes');
 const distRoot = path.join(root, 'dist', 'nodes');
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 

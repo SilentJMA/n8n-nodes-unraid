@@ -6,14 +6,14 @@ This repository holds two n8n nodes for the Unraid GraphQL API, **Unraid** (acti
 
 | Path | Role |
 |---|---|
-| `src/credentials/UnraidApi.credentials.ts` | Credential: server URL, `x-api-key`, self-signed option, and a test that rejects `UNAUTHENTICATED` / `FORBIDDEN` bodies |
-| `src/lib/client.ts` | The only HTTP call: `POST <serverUrl>/graphql`. Maps GraphQL errors to node errors with hints. |
-| `src/lib/queries.ts` | Every GraphQL document (`Q` queries, `M` mutations) |
-| `src/lib/analysis.ts` | Pure rules: `classifyLogLine`, `analyzeHealth`, severities and next steps. No n8n imports. |
-| `src/lib/logs.ts` | Splits, filters and classifies log text |
-| `src/lib/containers.ts` | Resolves a container name, ID or command-safe name to its ID |
-| `src/nodes/Unraid/Unraid.node.ts` | Action node: resources, operations, `execute` |
-| `src/nodes/UnraidTrigger/UnraidTrigger.node.ts` | Polling trigger. State lives in `getWorkflowStaticData('node')`. |
+| `credentials/UnraidApi.credentials.ts` | Credential: server URL, `x-api-key`, self-signed option, and a test that rejects `UNAUTHENTICATED` / `FORBIDDEN` bodies |
+| `lib/client.ts` | The only HTTP call: `POST <serverUrl>/graphql`. Maps GraphQL errors to node errors with hints. |
+| `lib/queries.ts` | Every GraphQL document (`Q` queries, `M` mutations) |
+| `lib/analysis.ts` | Pure rules: `classifyLogLine`, `analyzeHealth`, severities and next steps. No n8n imports. |
+| `lib/logs.ts` | Splits, filters and classifies log text |
+| `lib/containers.ts` | Resolves a container name, ID or command-safe name to its ID |
+| `nodes/Unraid/Unraid.node.ts` | Action node: resources, operations, `execute` |
+| `nodes/UnraidTrigger/UnraidTrigger.node.ts` | Polling trigger. State lives in `getWorkflowStaticData('node')`. |
 | `tests/` | Vitest unit tests for the pure libs |
 | `scripts/build-workflows.mjs` | Generates `workflows/*.json`. Never edit the JSON by hand. |
 | `scripts/assets.cjs`, `svg-check.cjs`, `clean.cjs` | Build helpers: copy icons and codex files, and check the SVGs are safe |
@@ -22,6 +22,8 @@ This repository holds two n8n nodes for the Unraid GraphQL API, **Unraid** (acti
 
 Keep these true in every change.
 
+- **n8n's standard layout.** `credentials/`, `nodes/` and `lib/` stay at the repo root. n8n's Creator Portal and package scanner map `package.json`'s `dist/<dir>/X.js` to `<dir>/X.ts` in the repo, and fail with "Can't find credential file in repo" for any other layout.
+- **No secret-looking names on non-secret fields.** n8n's lint rules flag any credential field whose name contains `password`, `secret`, `token`, `cert`, `apikey` and so on, unless it sets `typeOptions.password`. The scanner ignores inline `eslint-disable` comments.
 - **Stable identities.** Resource values, operation values, parameter names, trigger event values, and the credential name `unraidApi` are what saved workflows store. Never rename or remove one. Add new ones instead. If an option must go, keep it working and hide it with `displayOptions`.
 - **Behaviour changes need a node version.** If an existing parameter must start to mean something else, add `version: [1, 2]` and branch on `this.getNode().typeVersion`. Version 1 workflows must keep running unchanged.
 - **Schema first.** Every field in `queries.ts` must exist in `api/generated-schema.graphql` of [unraid/api](https://github.com/unraid/api). Download it and check before adding fields. Unraid answers an unknown field with a GraphQL error for the whole query.

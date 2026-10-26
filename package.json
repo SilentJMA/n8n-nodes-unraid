@@ -1,6 +1,6 @@
 {
   "name": "@silentjma/n8n-nodes-unraid",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Unofficial n8n community nodes for the Unraid GraphQL API: Docker, array, VMs, logs, notifications and a polling trigger for log/alert watching.",
   "keywords": [
     "n8n-community-node-package",

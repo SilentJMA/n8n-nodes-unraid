@@ -1,9 +1,9 @@
 {
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
-		"rootDir": "src",
+		"rootDir": ".",
 		"outDir": "dist",
 		"noEmit": false
 	},
-	"include": ["src/**/*.ts"]
+	"include": ["credentials/**/*.ts", "nodes/**/*.ts", "lib/**/*.ts"]
 }

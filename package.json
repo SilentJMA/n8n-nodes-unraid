@@ -68,9 +68,9 @@
     "@types/node": "22.20.5",
     "eslint": "9.29.0",
     "eslint-plugin-n8n-nodes-base": "1.16.7",
-    "n8n-workflow": "2.43.5",
+    "n8n-workflow": "2.45.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.71.2",
+    "typescript-eslint": "8.72.0",
     "vitest": "4.1.12"
   },
   "peerDependencies": {

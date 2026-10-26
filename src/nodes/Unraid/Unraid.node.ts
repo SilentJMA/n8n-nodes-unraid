@@ -8,12 +8,12 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 import { analyzeHealth, severityAtLeast, summarizeFindings, type HealthSnapshot, type Severity } from '../../lib/analysis';
 import { unraidGraphql } from '../../lib/client';
 import { containerOptions, resolveContainerIds, withName, type ContainerCache } from '../../lib/containers';
-import { filterLogLines, splitLogContent } from '../../lib/logs';
+import { filterLogLines, invalidPatternReason, splitLogContent } from '../../lib/logs';
 import { M, Q } from '../../lib/queries';
 
 const show = (resource: string, operation?: string[]) => ({
@@ -472,14 +472,14 @@ export class Unraid implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Unraid',
 		name: 'unraid',
-		icon: 'file:unraid.svg',
+		icon: { light: 'file:unraid.svg', dark: 'file:unraid.svg' },
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Monitor and control an Unraid server through its GraphQL API',
 		defaults: { name: 'Unraid' },
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
 		credentials: [{ name: 'unraidApi', required: true }],
 		properties,
@@ -585,6 +585,8 @@ export class Unraid implements INodeType {
 						push(i, withName(c));
 					} else if (operation === 'getLogs') {
 						const o = this.getNodeParameter('logOptions', i, {}) as IDataObject;
+						const badPattern = invalidPatternReason(o.pattern as string);
+						if (badPattern) throw new NodeOperationError(this.getNode(), badPattern, { itemIndex: i });
 						const vars: IDataObject = { id: await containerId(), tail: this.getNodeParameter('tail', i) as number };
 						if (o.since) vars.since = new Date(o.since as string).toISOString();
 						const logs = ((await gql(Q.containerLogs, vars)).docker as IDataObject).logs as { containerId: string; cursor?: string; lines: Array<{ timestamp: string; message: string }> };
@@ -628,6 +630,8 @@ export class Unraid implements INodeType {
 						push(i, (await gql(Q.logFiles)).logFiles as IDataObject[]);
 					} else {
 						const o = this.getNodeParameter('logOptions', i, {}) as IDataObject;
+						const badPattern = invalidPatternReason(o.pattern as string);
+						if (badPattern) throw new NodeOperationError(this.getNode(), badPattern, { itemIndex: i });
 						const vars: IDataObject = { path: this.getNodeParameter('logPath', i) as string, lines: this.getNodeParameter('lines', i) as number };
 						if (Number(o.startLine) > 0) vars.startLine = Number(o.startLine);
 						const file = (await gql(Q.logFile, vars)).logFile as { path: string; content: string; totalLines: number; startLine?: number };
@@ -683,8 +687,10 @@ export class Unraid implements INodeType {
 					out.push({ json: { error: (error as Error).message }, pairedItem: { item: i } });
 					continue;
 				}
-				if (error instanceof NodeOperationError && error.context.itemIndex === undefined) error.context.itemIndex = i;
-				throw error;
+				// Keep NodeApiError (it carries the HTTP details); wrap anything else so n8n shows it per item.
+				const nodeError = error instanceof NodeApiError ? error : new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
+				if (nodeError.context.itemIndex === undefined) nodeError.context.itemIndex = i;
+				throw nodeError;
 			}
 		}
 		return [out];

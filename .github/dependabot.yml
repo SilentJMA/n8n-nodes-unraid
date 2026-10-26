@@ -13,6 +13,9 @@ updates:
       # Major bumps (TypeScript, eslint, n8n-workflow) need a manual check against n8n's lint plugin.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # @n8n/eslint-plugin-community-nodes pins eslint exactly; bump these together with the plugin.
+      - dependency-name: 'eslint'
+      - dependency-name: '@eslint/js'
   - package-ecosystem: github-actions
     directory: /
     schedule:

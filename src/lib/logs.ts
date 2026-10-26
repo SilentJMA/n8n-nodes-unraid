@@ -26,13 +26,20 @@ export function splitLogContent(content: string, startLine?: number | null): Log
 	return raw.map((line, i) => ({ lineNumber: startLine ? startLine + i : undefined, line }));
 }
 
-export function compilePattern(pattern: string | undefined): RegExp | undefined {
-	if (!pattern?.trim()) return undefined;
+/** Why a filter pattern is not a valid regular expression, or null when it is fine (or empty). */
+export function invalidPatternReason(pattern: string | undefined): string | null {
+	if (!pattern?.trim()) return null;
 	try {
-		return new RegExp(pattern, 'i');
+		new RegExp(pattern, 'i');
+		return null;
 	} catch (error) {
-		throw new Error(`Invalid filter pattern "${pattern}": ${(error as Error).message}`);
+		return `Invalid filter pattern "${pattern}": ${(error as Error).message}`;
 	}
+}
+
+/** Case-insensitive regex for a filter pattern; undefined when empty or invalid (validate with invalidPatternReason first). */
+export function compilePattern(pattern: string | undefined): RegExp | undefined {
+	return invalidPatternReason(pattern) === null && pattern?.trim() ? new RegExp(pattern, 'i') : undefined;
 }
 
 export function filterLogLines(lines: LogLine[], filter: LogFilter): LogLine[] {

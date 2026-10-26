@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { analyzeHealth, classifyLogLine, summarizeFindings } from '../src/lib/analysis';
 import { matchContainer } from '../src/lib/containers';
-import { filterLogLines, splitLogContent } from '../src/lib/logs';
+import { filterLogLines, invalidPatternReason, splitLogContent } from '../src/lib/logs';
 
 describe('classifyLogLine', () => {
 	it.each([
@@ -102,5 +102,14 @@ describe('temperature thresholds', () => {
 		expect(analyzeHealth({ array: { state: 'STARTED', caches: [disk] } })).toHaveLength(0);
 		expect(analyzeHealth({ array: { state: 'STARTED', caches: [{ ...disk, temp: 62 }] } })[0].key).toBe('disk:temp:c:warning');
 		expect(analyzeHealth({ array: { state: 'STARTED', disks: [{ ...disk, rotational: true, type: 'DATA' }] } })[0].severity).toBe('warning');
+	});
+});
+
+describe('filter patterns', () => {
+	it('reports an invalid pattern instead of throwing', () => {
+		expect(invalidPatternReason('error|fail')).toBeNull();
+		expect(invalidPatternReason('')).toBeNull();
+		expect(invalidPatternReason('(unclosed')).toMatch(/Invalid filter pattern/);
+		expect(filterLogLines([{ line: 'x' }], { pattern: '(unclosed' })).toHaveLength(1);
 	});
 });

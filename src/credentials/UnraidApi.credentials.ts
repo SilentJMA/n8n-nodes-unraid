@@ -1,9 +1,11 @@
-import type { IAuthenticateGeneric, ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { IAuthenticateGeneric, ICredentialTestRequest, ICredentialType, Icon, INodeProperties } from 'n8n-workflow';
 
 export class UnraidApi implements ICredentialType {
 	name = 'unraidApi';
 
 	displayName = 'Unraid API';
+
+	icon: Icon = { light: 'file:../nodes/Unraid/unraid.svg', dark: 'file:../nodes/Unraid/unraid.svg' };
 
 	documentationUrl = 'https://docs.unraid.net/API/how-to-use-the-api/';
 
@@ -26,6 +28,8 @@ export class UnraidApi implements ICredentialType {
 			required: true,
 			description: 'Created in Settings › Management Access › API Keys (or "unraid-api apikey --create"). Docker updates, array and VM control need the admin role.',
 		},
+		// A boolean switch, not a secret: the rule matches "cert" in the name. Renaming it would reset saved credentials.
+		// eslint-disable-next-line @n8n/community-nodes/credential-password-field
 		{
 			displayName: 'Ignore SSL Issues',
 			name: 'allowUnauthorizedCerts',

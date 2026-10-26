@@ -1,6 +1,6 @@
 {
   "name": "@silentjma/n8n-nodes-unraid",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Unofficial n8n community nodes for the Unraid GraphQL API: Docker, array, VMs, logs, notifications and a polling trigger for log/alert watching.",
   "keywords": [
     "n8n-community-node-package",
@@ -13,6 +13,7 @@
   "license": "MIT",
   "author": {
     "name": "Mohamed Ayoub Jabane",
+    "email": "16384750+SilentJMA@users.noreply.github.com",
     "url": "https://github.com/SilentJMA"
   },
   "homepage": "https://github.com/SilentJMA/n8n-nodes-unraid#readme",
@@ -62,9 +63,10 @@
     ]
   },
   "devDependencies": {
-    "@eslint/js": "9.39.5",
+    "@eslint/js": "9.29.0",
+    "@n8n/eslint-plugin-community-nodes": "0.37.0",
     "@types/node": "22.20.5",
-    "eslint": "9.39.5",
+    "eslint": "9.29.0",
     "eslint-plugin-n8n-nodes-base": "1.16.7",
     "n8n-workflow": "2.43.5",
     "typescript": "5.9.3",

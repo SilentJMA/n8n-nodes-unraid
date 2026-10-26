@@ -4,7 +4,22 @@ All notable changes to this package. Versions follow [semver](https://semver.org
 
 ## Unreleased
 
-- Docs: Telegram needs a public HTTPS webhook. Set `N8N_WEBHOOK_URL`; on n8n 2.x, `WEBHOOK_URL` alone leaves test webhooks on the editor URL.
+## 0.1.1 - 2026-10-26
+
+Passes n8n's community package scanner (`npx @n8n/scan-community-package @silentjma/n8n-nodes-unraid`).
+
+### Fixed
+- `package.json`: `author` now includes an email, which the scanner requires (`valid-author`).
+- Nodes declare their inputs and outputs with `NodeConnectionTypes.Main`.
+- Errors from an operation are always raised as `NodeApiError` or `NodeOperationError`, with the item index, so n8n shows them properly per item.
+- An invalid log filter pattern now fails with a clear node error. It no longer throws a plain `Error` from the log helpers.
+
+### Added
+- Credential icon. Node icons use the light/dark form.
+- `npm run lint` now includes n8n's community node rules (`@n8n/eslint-plugin-community-nodes`, the ruleset the scanner runs), so CI catches scan failures before a release. ESLint is pinned to 9.29.0 to match that plugin.
+
+### Docs
+- Telegram needs a public HTTPS webhook. Set `N8N_WEBHOOK_URL`; on n8n 2.x, `WEBHOOK_URL` alone leaves test webhooks on the editor URL.
 
 ### Project
 - Community files: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, SUPPORT, issue and pull request templates, Dependabot.

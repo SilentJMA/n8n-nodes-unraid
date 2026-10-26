@@ -8,10 +8,12 @@ import type {
 	IPollFunctions,
 } from 'n8n-workflow';
 
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+
 import { analyzeHealth, containerName, severityAtLeast, type HealthSnapshot, type Severity } from '../../lib/analysis';
 import { unraidGraphql } from '../../lib/client';
 import { containerOptions, resolveContainerIds } from '../../lib/containers';
-import { filterLogLines, splitLogContent, type LogLine } from '../../lib/logs';
+import { filterLogLines, invalidPatternReason, splitLogContent, type LogLine } from '../../lib/logs';
 import { NOTIFICATION_FIELDS, Q } from '../../lib/queries';
 
 interface PollState {
@@ -37,7 +39,7 @@ export class UnraidTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Unraid Trigger',
 		name: 'unraidTrigger',
-		icon: 'file:unraid.svg',
+		icon: { light: 'file:unraid.svg', dark: 'file:unraid.svg' },
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["event"]}}',
@@ -45,7 +47,7 @@ export class UnraidTrigger implements INodeType {
 		defaults: { name: 'Unraid Trigger' },
 		polling: true,
 		inputs: [],
-		outputs: ['main'],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [{ name: 'unraidApi', required: true }],
 		properties: [
 			{
@@ -175,6 +177,8 @@ export class UnraidTrigger implements INodeType {
 	async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
 		const event = this.getNodeParameter('event') as string;
 		const options = this.getNodeParameter('options', {}) as IDataObject;
+		const badPattern = invalidPatternReason(options.pattern as string);
+		if (badPattern) throw new NodeOperationError(this.getNode(), badPattern);
 		const state = this.getWorkflowStaticData('node') as PollState;
 		const manual = this.getMode() === 'manual';
 		const emitExisting = manual || options.emitExisting === true;
